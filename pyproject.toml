@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "adaptive_labeler"
+version = "0.0.1"
+description = ""
+authors = ["C. Thomas Brittain <cthomasbrittain@hotmail.com>"]
+readme = "README.md"
+
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pillow = "^10.4.0"
+pandas = "^2.2.3"
+pyarrow = "^17.0.0"
+rich = "^13.8.1"
+flet = "^0.27.6"
+pytest = "^8.3.5"
+pynput = "^1.8.1"
+poethepoet = "^0.34.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+# https://docs.pytest.org/en/6.2.x/customize.html
+# https://pytest-with-eric.com/configuration/pytest-config-file/#Using-pytest-ini
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = ["tests", "integration"]
