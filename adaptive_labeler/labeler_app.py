@@ -25,7 +25,7 @@ class LabelAppFactory:
             page.theme_mode = ft.ThemeMode.SYSTEM
             page.window.always_on_top = True
             page.window.focused = True
-            page.window.full_screen = True
+            page.window.full_screen = False
 
             color_scheme = LabelerColorScheme.flet_color_scheme()
             page.bgcolor = LabelerColorScheme.BACKGROUND

@@ -1,14 +1,15 @@
 from adaptive_labeler.controls.instructions import Instructions
 from adaptive_labeler.controls.labeling_progress import LabelingProgress
 from adaptive_labeler.controls.noise_control import NoiseControl
+from adaptive_labeler.label_manager import LabelManager
 import flet as ft
 
 
 class LabelingControls(ft.Row):
     def __init__(
         self,
-        label_manager,
-        color_scheme,
+        label_manager: LabelManager,
+        color_scheme: ft.ColorScheme | None,
         on_mode_toggle,
         on_slider_update,
         on_resample_click,
@@ -16,7 +17,9 @@ class LabelingControls(ft.Row):
         super().__init__()
         self.color_scheme = color_scheme
         self.label_manager = label_manager
+        initial_value = label_manager.get_severity_range()[0]
         self.noise_control = NoiseControl(
+            initial_value=initial_value,
             on_end_change=on_slider_update,
             on_resample_click=on_resample_click,
             color_scheme=color_scheme,

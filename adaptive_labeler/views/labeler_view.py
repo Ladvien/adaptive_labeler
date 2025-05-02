@@ -11,12 +11,17 @@ from adaptive_labeler.label_manager import LabelManager
 
 class ImagePairControlView(ft.Column):
     def __init__(
-        self, label_manager: LabelManager, color_scheme=None, start_mode="labeling"
+        self,
+        label_manager: LabelManager,
+        color_scheme=None,
+        start_mode="labeling",
+        minimum_slider_value=0.01,
     ):
         super().__init__()
         self.label_manager = label_manager
         self.color_scheme = color_scheme or ft.ColorScheme()
         self.mode = start_mode
+        self.minimum_slider_value = minimum_slider_value
 
         # Data
         self.unlabeled_pair = label_manager.new_unlabeled()
@@ -63,8 +68,8 @@ class ImagePairControlView(ft.Column):
         self.update()
 
     # ---------- Slider/Noise Callbacks ----------
-    def on_slider_update(self, e, start_value, end_value):
-        self.label_manager.set_severity_level(start_value, end_value)
+    def on_slider_update(self, e, value):
+        self.label_manager.set_severity_level(value, value)
         self._resample_images()
 
     def on_resample_click(self, e, start_value, end_value):
@@ -73,16 +78,16 @@ class ImagePairControlView(ft.Column):
     # ---------- Noise adjustment ----------
     def increase_noise(self):
         start, end = self.label_manager.get_severity_range()
-        new_start = min(start + 0.05, 1.0)
-        new_end = min(end + 0.05, 1.0)
-        self.label_manager.set_severity_level(new_start, new_end)
+        new_value = min(start + 0.01, 1.0)
+        self.label_manager.set_severity_level(new_value, new_value)
+        self.labeling_controls.noise_control.value = new_value
         self._resample_images()
 
     def decrease_noise(self):
         start, end = self.label_manager.get_severity_range()
-        new_start = max(start - 0.05, 0.0)
-        new_end = max(end - 0.05, 0.0)
-        self.label_manager.set_severity_level(new_start, new_end)
+        new_value = max(start - 0.01, self.minimum_slider_value)
+        self.label_manager.set_severity_level(new_value, new_value)
+        self.labeling_controls.noise_control.value = new_value
         self._resample_images()
 
     # ---------- Image Updates ----------
