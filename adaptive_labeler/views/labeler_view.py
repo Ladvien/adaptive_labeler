@@ -10,7 +10,9 @@ from adaptive_labeler.label_manager import LabelManager
 
 
 class ImagePairControlView(ft.Column):
-    def __init__(self, label_manager, color_scheme=None, start_mode="labeling"):
+    def __init__(
+        self, label_manager: LabelManager, color_scheme=None, start_mode="labeling"
+    ):
         super().__init__()
         self.label_manager = label_manager
         self.color_scheme = color_scheme or ft.ColorScheme()

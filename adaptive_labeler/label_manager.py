@@ -101,6 +101,9 @@ class LabelManager:
             raise ValueError("Minimum severity level cannot be greater than maximum.")
         self.config.severity_range = (severity_min, severity_max)
 
+    def get_severity_range(self) -> tuple[float, float]:
+        return self.config.severity_range
+
     def save_label(self, labeled_pair: LabeledImagePair) -> None:
         if labeled_pair.original_image_path in self.labeled_image_paths:
             raise Exception(f"This image pair is already labeled. {labeled_pair}")

@@ -148,6 +148,7 @@ if __name__ == "__main__":
             temporary_dir=TEMPORARY_IMAGES_OUTPUT_PATH,
             image_samples=NUM_IMAGE_SAMPLES,
         ),
+        key_press_debounce_delay=0.001,
     )
 
     ft.app(target=LabelAppFactory.create_labeler_app(config))
