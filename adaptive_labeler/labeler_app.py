@@ -10,7 +10,6 @@ import time
 from adaptive_labeler.color_scheme import LabelerColorScheme
 from adaptive_labeler.label_manager import LabelManager
 from adaptive_labeler.views.labeler_view import ImagePairControlView
-from adaptive_labeler.views.review_view import ReviewControlView
 from adaptive_labeler import LabelerConfig, LabelManagerConfig
 
 
@@ -47,13 +46,10 @@ class LabelAppFactory:
                 return
 
             image_labeler = ImagePairControlView(label_manager, color_scheme)
-            labeled_image_pairs = label_manager.get_labeled_image_pairs()
-            review = ReviewControlView(labeled_image_pairs, color_scheme)
 
             # Placeholder page content dict
             views = {
-                0: review,
-                1: image_labeler,
+                0: image_labeler,
                 # 2: ft.Text("About view (placeholder)", size=20),
             }
 
@@ -71,7 +67,6 @@ class LabelAppFactory:
                 min_width=80,
                 min_extended_width=200,
                 destinations=[
-                    NavDest(icon=ft.Icons.RATE_REVIEW, label="Review"),
                     NavDest(icon=ft.Icons.IMAGE, label="Labeling"),
                     # NavDest(icon=ft.icons.INFO, label="About"),
                 ],
@@ -96,11 +91,6 @@ class LabelAppFactory:
                 silent_focus.focus()
 
                 if isinstance(content_area.content, ImagePairControlView):
-                    handled = content_area.content.handle_keyboard_event(key)
-                    if handled:
-                        page.update()
-
-                if isinstance(content_area.content, ReviewControlView):
                     handled = content_area.content.handle_keyboard_event(key)
                     if handled:
                         page.update()
