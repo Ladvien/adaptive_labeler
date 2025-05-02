@@ -4,6 +4,7 @@ from adaptive_labeler.controls.labeling_controls import LabelingControls
 from adaptive_labeler.controls.review_controls import ReviewControls
 import flet as ft
 from typing import Literal
+from pynput import keyboard
 from pynput.keyboard import Key, KeyCode
 
 from adaptive_labeler.label_manager import LabelManager
@@ -35,7 +36,6 @@ class ImagePairControlView(ft.Column):
             self.color_scheme,
             self.toggle_mode,
             self.on_slider_update,
-            self.on_resample_click,
         )
         self.review_controls = ReviewControls(
             self.labeled_image_pairs,
@@ -56,9 +56,15 @@ class ImagePairControlView(ft.Column):
             ),
         ]
 
-        # Key handling
+        # Key state
+        self.shift_pressed = False
+
+        # Key debounce
         self._last_action_time = 0.0
         self._debounce_interval = 0.3
+
+        # Start listener 🔥
+        self._start_keyboard_listener()
 
     # ---------- Mode switching ----------
     def toggle_mode(self, e=None):
@@ -69,30 +75,31 @@ class ImagePairControlView(ft.Column):
 
     # ---------- Slider/Noise Callbacks ----------
     def on_slider_update(self, e, value):
-        self.label_manager.set_severity_level(value, value)
-        self._resample_images()
-
-    def on_resample_click(self, e, start_value, end_value):
+        self.label_manager.set_severity(value, value)
         self._resample_images()
 
     # ---------- Noise adjustment ----------
-    def increase_noise(self):
-        start, end = self.label_manager.get_severity_range()
-        new_value = min(start + 0.01, 1.0)
-        self.label_manager.set_severity_level(new_value, new_value)
+    def increase_noise(self, shift: bool = False):
+        severity = self.label_manager.severity()
+        increment = 0.05 if shift else 0.01
+        new_value = min(severity + increment, 1.0)
+        self.label_manager.set_severity(new_value)
         self.labeling_controls.noise_control.value = new_value
         self._resample_images()
 
-    def decrease_noise(self):
-        start, end = self.label_manager.get_severity_range()
-        new_value = max(start - 0.01, self.minimum_slider_value)
-        self.label_manager.set_severity_level(new_value, new_value)
+    def decrease_noise(self, shift: bool = False):
+        severity = self.label_manager.severity()
+        decrement = 0.05 if shift else 0.01
+        new_value = max(severity - decrement, self.minimum_slider_value)
+        self.label_manager.set_severity(new_value)
         self.labeling_controls.noise_control.value = new_value
         self._resample_images()
 
     # ---------- Image Updates ----------
     def _label_image(self, label: str):
-        labeled_pair = self.unlabeled_pair.label(label)
+        labeled_pair = self.unlabeled_pair.label(
+            label, self.label_manager.label_writer.path
+        )
         self.label_manager.save_label(labeled_pair)
         self.unlabeled_pair = self.label_manager.new_unlabeled()
         self.image_panel.update_images(self.unlabeled_pair)
@@ -114,7 +121,6 @@ class ImagePairControlView(ft.Column):
         if not self._can_act():
             return False
 
-        # ----- Universal keys -----
         if key == Key.tab:
             self.toggle_mode()
             return True
@@ -125,7 +131,6 @@ class ImagePairControlView(ft.Column):
             return self._handle_review_keys(key)
 
     def _handle_labeling_keys(self, key: Key | KeyCode) -> bool:
-        # Labeling mode
         if key == Key.right:
             self._label_image("acceptable")
             return True
@@ -133,10 +138,11 @@ class ImagePairControlView(ft.Column):
             self._label_image("unacceptable")
             return True
         elif key == Key.up:
-            self.increase_noise()
+            print("Shift pressed?", self.shift_pressed)  # Debug!
+            self.increase_noise(shift=self.shift_pressed)
             return True
         elif key == Key.down:
-            self.decrease_noise()
+            self.decrease_noise(shift=self.shift_pressed)
             return True
         return False
 
@@ -158,4 +164,22 @@ class ImagePairControlView(ft.Column):
     def _update_review_image(self):
         pair = self.labeled_image_pairs[self._review_index]
         self.image_panel.update_images(pair)
-        self.review_controls.update_label(pair.label)
+        self.review_controls.update_label(pair.degradation_point)
+
+    # ---------- Key listener methods ----------
+    def _start_keyboard_listener(self):
+        listener = keyboard.Listener(
+            on_press=self._on_press, on_release=self._on_release
+        )
+        listener.start()
+
+    def _on_press(self, key):
+        if key in (Key.shift, Key.shift_r):
+            self.shift_pressed = True
+        else:
+            # Forward other keys to handler
+            self.handle_keyboard_event(key)
+
+    def _on_release(self, key):
+        if key in (Key.shift, Key.shift_r):
+            self.shift_pressed = False

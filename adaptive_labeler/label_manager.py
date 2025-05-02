@@ -15,8 +15,8 @@ from adaptive_labeler.label_manager_config import (
 
 @dataclass
 class LabeledImagePair:
-    original_image_path: ImagePath
-    noisy_image_path: ImagePath
+    image_path: ImagePath
+    output_path: ImagePath
     label: str
 
     def update_label(self, new_label: str) -> None:
@@ -24,12 +24,11 @@ class LabeledImagePair:
 
 
 @dataclass
-class UnlabeledImagePair:
-    original_image_path: ImagePath
-    noisy_image_path: ImagePath
+class UnlabeledImage:
+    image_path: ImagePath
 
-    def label(self, label: str) -> LabeledImagePair:
-        return LabeledImagePair(self.original_image_path, self.noisy_image_path, label)
+    def label(self, label: str, output_path: str) -> LabeledImagePair:
+        return LabeledImagePair(self.image_path, ImagePath(output_path), label)
 
 
 class LabelWriter:
@@ -46,15 +45,10 @@ class LabelWriter:
             print(f"Loading existing label CSV: {self.path}")
             self.df = pd.read_csv(self.path)
 
-            if self.df.empty:
-                raise ValueError(
-                    f"Label CSV is empty. Please check the file: {self.path}"
-                )
-
     def record_label(self, labeled_pair: LabeledImagePair):
         new_row = {
-            "original_image_path": str(labeled_pair.original_image_path.path),
-            "noisy_image_path": str(labeled_pair.noisy_image_path.path),
+            "original_image_path": str(labeled_pair.image_path.path),
+            "noisy_image_path": str(labeled_pair.output_path.path),
             "label": labeled_pair.label,
         }
         self.df.loc[len(self.df)] = new_row
@@ -94,23 +88,21 @@ class LabelManager:
         self.total_samples = config.image_samples or self.image_loader.total()
         self.unlabeled_noisy_image_path = None
 
-    def set_severity_level(self, severity_min: float, severity_max: float) -> None:
-        if severity_min < 0 or severity_max < 0:
-            raise ValueError("Severity levels must be non-negative.")
-        if severity_min > severity_max:
-            raise ValueError("Minimum severity level cannot be greater than maximum.")
-        self.config.severity_range = (severity_min, severity_max)
+    def set_severity(self, severity: float) -> None:
+        if not (0 <= severity <= 1):
+            raise ValueError("Severity must be between 0 and 1.")
+        self.config.severity = severity
 
-    def get_severity_range(self) -> tuple[float, float]:
-        return self.config.severity_range
+    def severity(self) -> float:
+        return self.config.severity
 
     def save_label(self, labeled_pair: LabeledImagePair) -> None:
-        if labeled_pair.original_image_path in self.labeled_image_paths:
+        if labeled_pair.image_path in self.labeled_image_paths:
             raise Exception(f"This image pair is already labeled. {labeled_pair}")
         self.label_writer.record_label(labeled_pair)
-        self.labeled_image_paths.append(labeled_pair.original_image_path)
+        self.labeled_image_paths.append(labeled_pair.image_path)
 
-    def new_unlabeled(self) -> UnlabeledImagePair | None:
+    def new_unlabeled(self) -> UnlabeledImage | None:
         image_path = next(self.image_loader)
         if image_path is None:
             return self.image_loader.reset()
@@ -120,22 +112,13 @@ class LabelManager:
         )
         return self._unlabeled_pair(image_path)
 
-    def resample_images(self, unlabeled_pair: UnlabeledImagePair) -> UnlabeledImagePair:
-        if unlabeled_pair.original_image_path in self.labeled_image_paths:
+    def resample_images(self, unlabeled_pair: UnlabeledImage) -> UnlabeledImage:
+        if unlabeled_pair.image_path in self.labeled_image_paths:
             raise Exception(f"This image pair is already labeled. {unlabeled_pair}")
-        return self._unlabeled_pair(unlabeled_pair.original_image_path)
+        return self._unlabeled_pair(unlabeled_pair.image_path)
 
-    def _unlabeled_pair(self, image_path: ImagePath) -> UnlabeledImagePair:
-        new_image = image_path.load()
-        new_image.save(self.unlabeled_noisy_image_path, quality=100)
-        noisy_image_path = ImagePath(self.unlabeled_noisy_image_path)
-
-        min_noise, max_noise = self.config.severity_range
-        noise_level = uniform(min_noise, max_noise)
-        noisy_image = ImageNoiser.add_jpeg_compression(new_image, noise_level)
-        noisy_image.save(noisy_image_path.path, quality=100)
-
-        return UnlabeledImagePair(image_path, noisy_image_path)
+    def _unlabeled_pair(self, image_path: ImagePath) -> UnlabeledImage:
+        return UnlabeledImage(image_path)
 
     def unlabeled_count(self) -> int:
         return self.total_samples - len(self.labeled_image_paths)

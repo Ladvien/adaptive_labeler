@@ -10,7 +10,6 @@ class NoiseControl(ft.Column):
         max_val: float = 1.0,
         step: float = 0.001,
         on_end_change: Callable = None,
-        on_resample_click: Callable = None,
         color_scheme: ft.ColorScheme | None = None,
     ):
         super().__init__()
@@ -19,7 +18,6 @@ class NoiseControl(ft.Column):
         self.max_val = max_val
         self.step = step
         self.on_change_end = on_end_change
-        self.on_resample_click = on_resample_click
 
         self.color_scheme = color_scheme or ft.ColorScheme(
             primary="#7F00FF",
@@ -37,7 +35,7 @@ class NoiseControl(ft.Column):
         self.slider = ft.Slider(
             min=self.min_val,
             max=self.max_val,
-            value=self._clamp(initial_value),
+            value=self._quantize(initial_value),
             divisions=int((max_val - min_val) / step) if step else None,
             round=3,
             on_change=self._on_slider_change,
@@ -45,25 +43,9 @@ class NoiseControl(ft.Column):
             expand=True,
         )
 
-        self.refresh_button = ft.ElevatedButton(
-            "Resample",
-            icon=ft.Icons.REFRESH,
-            style=ft.ButtonStyle(
-                bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.ON_SURFACE),
-                padding=ft.padding.symmetric(horizontal=20, vertical=10),
-                shape=ft.RoundedRectangleBorder(radius=6),
-            ),
-            on_click=self._on_resample_click,
-        )
-
         self.controls = [
             self.value_label,
             self.slider,
-            ft.Container(
-                content=self.refresh_button,
-                alignment=ft.alignment.center,
-                padding=ft.padding.only(top=8),
-            ),
         ]
 
         self.spacing = 5
@@ -72,26 +54,33 @@ class NoiseControl(ft.Column):
     def _clamp(self, value: float) -> float:
         return min(max(value, self.min_val), self.max_val)
 
+    def _quantize(self, value: float) -> float:
+        """Snap the value to the nearest multiple of the step."""
+        value = self._clamp(value)
+        steps = round((value - self.min_val) / self.step)
+        return round(self.min_val + steps * self.step, 6)
+
     def _on_slider_change(self, e: ft.ControlEvent):
-        """Update label as the slider moves."""
-        self.value_label.value = f"Noise Level: {round(self.slider.value * 100, 2)}%"
+        """Update label as the slider moves and quantize the value."""
+        quantized_value = self._quantize(self.slider.value)
+        if quantized_value != self.slider.value:
+            self.slider.value = quantized_value
+            self.slider.update()
+        self.value_label.value = f"Noise Level: {round(quantized_value * 100, 2)}%"
         self.value_label.update()
 
     @property
     def value(self) -> float:
         """Current noise value."""
-        return self.slider.value
+        return self._quantize(self.slider.value)
 
     @value.setter
     def value(self, new_value: float):
-        self.slider.value = self._clamp(new_value)
+        quantized = self._quantize(new_value)
+        self.slider.value = quantized
         self.slider.update()
         self._on_slider_change(None)
 
     def _on_end_change(self, e: ft.ControlEvent):
         if self.on_change_end:
-            self.on_change_end(e, self.slider.value)
-
-    def _on_resample_click(self, e: ft.ControlEvent):
-        if self.on_resample_click:
-            self.on_resample_click(e, self.slider.value)
+            self.on_change_end(e, self.value)  # Use quantized value!

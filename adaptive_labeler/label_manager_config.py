@@ -15,7 +15,7 @@ class LabelManagerConfig:
         default_factory=lambda: [".jpg", ".jpeg", ".png", ".gif"]
     )
     noise_functions: Optional[List[str]] = None
-    severity_range: Tuple[float, float] = (0.2, 0.95)
+    severity: float = 0.0
 
     image_samples: int | None = None
 

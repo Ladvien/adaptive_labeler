@@ -12,16 +12,14 @@ class LabelingControls(ft.Row):
         color_scheme: ft.ColorScheme | None,
         on_mode_toggle,
         on_slider_update,
-        on_resample_click,
     ):
         super().__init__()
         self.color_scheme = color_scheme
         self.label_manager = label_manager
-        initial_value = label_manager.get_severity_range()[0]
+        initial_value = label_manager.severity()
         self.noise_control = NoiseControl(
             initial_value=initial_value,
             on_end_change=on_slider_update,
-            on_resample_click=on_resample_click,
             color_scheme=color_scheme,
         )
         self.progress_area = LabelingProgress(
