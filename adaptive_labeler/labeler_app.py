@@ -9,8 +9,8 @@ import threading
 import time
 from adaptive_labeler.color_scheme import LabelerColorScheme
 from adaptive_labeler.label_manager import LabelManager
-from adaptive_labeler.views.labeler_control import ImageLabelerControlView
-from adaptive_labeler.views.review_control import ReviewControlView
+from adaptive_labeler.views.labeler_view import ImagePairControlView
+from adaptive_labeler.views.review_view import ReviewControlView
 from adaptive_labeler import LabelerConfig, LabelManagerConfig
 
 
@@ -46,7 +46,7 @@ class LabelAppFactory:
                 page.add(ft.Text("No images found."))
                 return
 
-            image_labeler = ImageLabelerControlView(label_manager, color_scheme)
+            image_labeler = ImagePairControlView(label_manager, color_scheme)
             labeled_image_pairs = label_manager.get_labeled_image_pairs()
             review = ReviewControlView(labeled_image_pairs, color_scheme)
 
@@ -95,7 +95,7 @@ class LabelAppFactory:
                 silent_focus.value = ""
                 silent_focus.focus()
 
-                if isinstance(content_area.content, ImageLabelerControlView):
+                if isinstance(content_area.content, ImagePairControlView):
                     handled = content_area.content.handle_keyboard_event(key)
                     if handled:
                         page.update()
