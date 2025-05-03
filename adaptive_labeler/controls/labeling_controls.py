@@ -16,7 +16,7 @@ class LabelingControls(ft.Row):
         super().__init__()
         self.color_scheme = color_scheme
         self.label_manager = label_manager
-        initial_value = label_manager.severity()
+        initial_value = label_manager.get_severity()
         self.noise_control = NoiseControl(
             initial_value=initial_value,
             on_end_change=on_slider_update,

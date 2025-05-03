@@ -1,6 +1,6 @@
 import flet as ft
 from adaptive_labeler.label_manager import (
-    LabeledImagePair,
+    LabeledImageSeed,
     UnlabeledImage,
 )
 from adaptive_labeler.controls.image_with_label import (
@@ -11,7 +11,7 @@ from adaptive_labeler.controls.image_with_label import (
 class ImagePairViewer(ft.Container):
     def __init__(
         self,
-        pair: UnlabeledImage | LabeledImagePair,
+        pair: UnlabeledImage | LabeledImageSeed,
         color_scheme: ft.ColorScheme | None = None,
     ):
         super().__init__()

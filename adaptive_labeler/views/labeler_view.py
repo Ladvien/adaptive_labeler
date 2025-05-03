@@ -75,12 +75,12 @@ class ImagePairControlView(ft.Column):
 
     # ---------- Slider/Noise Callbacks ----------
     def on_slider_update(self, e, value):
-        self.label_manager.set_severity(value, value)
+        self.label_manager.set_severity(value)
         self._resample_images()
 
     # ---------- Noise adjustment ----------
     def increase_noise(self, shift: bool = False):
-        severity = self.label_manager.severity()
+        severity = self.label_manager.get_severity()
         increment = 0.05 if shift else 0.01
         new_value = min(severity + increment, 1.0)
         self.label_manager.set_severity(new_value)
@@ -88,7 +88,7 @@ class ImagePairControlView(ft.Column):
         self._resample_images()
 
     def decrease_noise(self, shift: bool = False):
-        severity = self.label_manager.severity()
+        severity = self.label_manager.get_severity()
         decrement = 0.05 if shift else 0.01
         new_value = max(severity - decrement, self.minimum_slider_value)
         self.label_manager.set_severity(new_value)
@@ -97,16 +97,16 @@ class ImagePairControlView(ft.Column):
 
     # ---------- Image Updates ----------
     def _label_image(self, label: str):
-        labeled_pair = self.unlabeled_pair.label(
-            label, self.label_manager.label_writer.path
-        )
+        labeled_pair = self.unlabeled_pair.label(label)
         self.label_manager.save_label(labeled_pair)
         self.unlabeled_pair = self.label_manager.new_unlabeled()
         self.image_panel.update_images(self.unlabeled_pair)
         self.labeling_controls.update_progress()
 
     def _resample_images(self):
-        self.unlabeled_pair = self.label_manager.resample_images(self.unlabeled_pair)
+        self.unlabeled_pair = self.label_manager.resample_images(
+            self.unlabeled_pair,
+        )
         self.image_panel.update_images(self.unlabeled_pair)
 
     # ---------- Keyboard Handling ----------
@@ -132,10 +132,10 @@ class ImagePairControlView(ft.Column):
 
     def _handle_labeling_keys(self, key: Key | KeyCode) -> bool:
         if key == Key.right:
-            self._label_image("acceptable")
+            self._label_image(self.label_manager.get_severity())
             return True
         elif key == Key.left:
-            self._label_image("unacceptable")
+            self._label_image(self.label_manager.get_severity())
             return True
         elif key == Key.up:
             print("Shift pressed?", self.shift_pressed)  # Debug!
