@@ -97,17 +97,15 @@ class ImagePairControlView(ft.Column):
 
     # ---------- Image Updates ----------
     def _label_image(self, label: str):
-        labeled_pair = self.unlabeled_pair.label(label)
+        labeled_pair = self.unlabeled_pair.create_labeled(label)
         self.label_manager.save_label(labeled_pair)
         self.unlabeled_pair = self.label_manager.new_unlabeled()
+
         self.image_panel.update_images(self.unlabeled_pair)
         self.labeling_controls.update_progress()
 
     def _resample_images(self):
-        self.unlabeled_pair = self.label_manager.resample_images(
-            self.unlabeled_pair,
-        )
-        self.image_panel.update_images(self.unlabeled_pair)
+        self.image_panel.update_images(self.unlabeled_pair.noisy_base64())
 
     # ---------- Keyboard Handling ----------
     def _can_act(self) -> bool:

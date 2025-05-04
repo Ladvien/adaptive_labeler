@@ -1,3 +1,4 @@
+from adaptive_labeler.label_manager import NoisyImageMaker
 import flet as ft
 
 from adaptive_labeler.controls.image_pair_view import ImagePairViewer
@@ -13,5 +14,6 @@ class ImageViewerPanel(ft.Container):
         self.border_radius = 12
         self.expand = 3
 
-    def update_images(self, pair):
-        self.viewer.update_images(pair)
+    def update_images(self, unlabeled_image: NoisyImageMaker, severity: float):
+        self.viewer.update_images(unlabeled_image.image_path)
+        self.image_control.update()

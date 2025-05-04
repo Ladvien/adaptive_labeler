@@ -1,12 +1,12 @@
 from typing import Callable
-from adaptive_labeler.label_manager import LabeledImageSeed
+from adaptive_labeler.label_manager import NoisyImageMaker
 import flet as ft
 
 
 class ReviewControls(ft.Row):
     def __init__(
         self,
-        labeled_image_pairs: list[LabeledImageSeed],
+        labeled_image_pairs: list[NoisyImageMaker],
         color_scheme: ft.ColorScheme | None,
         on_mode_toggle: Callable,
     ):
@@ -15,7 +15,7 @@ class ReviewControls(ft.Row):
         self.labeled_image_pairs = labeled_image_pairs
         self._review_index = 0
 
-        label = labeled_image_pairs[0].threshold if labeled_image_pairs else ""
+        label = labeled_image_pairs[0].label if labeled_image_pairs else ""
         self.label_name_text = ft.Text(
             label,
             size=14,

@@ -1,7 +1,6 @@
 import flet as ft
 from adaptive_labeler.label_manager import (
-    LabeledImageSeed,
-    UnlabeledImage,
+    NoisyImageMaker,
 )
 from adaptive_labeler.controls.image_with_label import (
     ImageWithLabel,
@@ -11,7 +10,7 @@ from adaptive_labeler.controls.image_with_label import (
 class ImagePairViewer(ft.Container):
     def __init__(
         self,
-        pair: UnlabeledImage | LabeledImageSeed,
+        pair: NoisyImageMaker,
         color_scheme: ft.ColorScheme | None = None,
     ):
         super().__init__()
@@ -57,7 +56,7 @@ class ImagePairViewer(ft.Container):
         )
         self.expand = True
 
-    def update_images(self, pair: UnlabeledImage):
+    def update_images(self, unlabeled_image: NoisyImageMaker) -> None:
         self.original.update_images(pair.image_path)
         self.noisy.update_images(pair.image_path)
         self.update()

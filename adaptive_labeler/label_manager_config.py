@@ -43,12 +43,6 @@ class LabelManagerConfig:
         if not os.path.isdir(self.output_dir):
             raise ValueError(f"Output directory is invalid: {self.output_dir}")
 
-        if not os.path.isfile(self.label_csv_path):
-            raise ValueError(f"Label CSV path is invalid: {self.label_csv_path}")
-        if not self.label_csv_path.endswith(".csv"):
-            raise ValueError(
-                f"Label CSV path must be a .csv file: {self.label_csv_path}"
-            )
         if self.image_samples is not None and self.image_samples <= 0:
             raise ValueError("Image samples must be a positive integer.")
         if self.samples_per_image <= 0:

@@ -67,7 +67,7 @@ class ImageWithLabel(ft.Column):
         self.name.value = image_path.name
         self.image.src_base64 = image_path.load_as_base64()
 
-    def update_images(self, image_path: ImagePath):
+    def update_images(self, image_base64: str) -> None:
         """Update the displayed image from a new ImagePath."""
         self.__set_images(image_path)
         self.image.update()
