@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+from image_utils.image_noiser import ImageNoiser
+
 
 @dataclass
 class LabelManagerConfig:
@@ -30,7 +32,14 @@ class LabelManagerConfig:
         if isinstance(self.images_dir, str):
             self.images_dir = Path(self.images_dir)
         if isinstance(self.output_dir, str):
-            self.output_dir = Path(self.output_dir)
+            self.output_dir = Path(self.output_dir, "train")
+
+        if self.noise_functions is None:
+            self.noise_functions = [
+                ImageNoiser.add_jpeg_compression,
+                # ImageNoiser.add_gaussian_noise,
+                # ImageNoiser.add_salt_and_pepper_noise,
+            ]
 
         self.validate()
 

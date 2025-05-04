@@ -6,11 +6,12 @@ class ImageWithLabel(ft.Column):
     def __init__(
         self,
         label_text: str,
-        image_path: ImagePath,
+        image_name: str,
+        image_base64: str,
         color_scheme: ft.ColorScheme | None = None,
     ):
         super().__init__()
-        self.image_path = image_path
+
         # Use provided theme or fallback
         self.color_scheme = color_scheme or ft.ColorScheme(
             primary="#7F00FF",
@@ -44,13 +45,13 @@ class ImageWithLabel(ft.Column):
         )
 
         self.name = ft.Text(
-            image_path.name,
+            image_name,
             size=14,
             color=self.color_scheme.on_background,
             text_align=ft.TextAlign.CENTER,
         )
 
-        self.__set_images(image_path)
+        self.__set_images(image_name, image_base64)
 
         # Assemble controls
         self.controls = [
@@ -63,12 +64,14 @@ class ImageWithLabel(ft.Column):
         self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
         self.expand = True
 
-    def __set_images(self, image_path: ImagePath):
-        self.name.value = image_path.name
-        self.image.src_base64 = image_path.load_as_base64()
-
-    def update_images(self, image_base64: str) -> None:
-        """Update the displayed image from a new ImagePath."""
-        self.__set_images(image_path)
+    def on_mount(self):
         self.image.update()
         self.name.update()
+
+    def __set_images(self, image_name: str, image_base64: str) -> None:
+        self.name.value = image_name
+        self.image.src_base64 = image_base64
+
+    def update_images(self, image_name: str, image_base64: str) -> None:
+        """Update the displayed image from a new ImagePath."""
+        self.__set_images(image_name, image_base64)
