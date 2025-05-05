@@ -120,6 +120,7 @@ class LabelManager:
             self.label_writer.record_label(labeled_noisy_image)
             new_noisy_images.append(noisy_image_path)
             self.labeled_image_paths.append(str(maker.image_path))
+            self.labeled_image_paths = list(set(self.labeled_image_paths))
 
     def new_unlabeled(self) -> NoisyImageMaker | None:
         try:

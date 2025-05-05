@@ -1,5 +1,6 @@
 from pathlib import Path
 import time
+from adaptive_labeler.noisy_image_maker import NoisyImageMaker
 import flet as ft
 from image_utils.image_noiser import ImageNoiser
 from pynput import keyboard
@@ -101,20 +102,24 @@ class ImagePairControlView(ft.Column):
         self._change_severity(delta=decrement)
 
     def _change_severity(self, delta: float):
-        new_value = self.label_manager.get_noise_level() + delta
+        new_value = self.label_manager.get_severity() + delta
         new_value = max(self.minimum_slider_value, min(new_value, 1.0))
         self.label_manager.set_severity(new_value)
         self.labeling_controls.noise_control.value = new_value
         self._resample_noisy_image()
 
     def _resample_noisy_image(self):
+        updated_maker = NoisyImageMaker(
+            self.unlabeled_image.image_path,
+            self.label_manager.config.output_dir,
+            self.label_manager.get_severity(),
+        )
+
         self.image_panel.update_images(
-            original_image_name=self.unlabeled_image.image_path.name,
-            noisy_image_name=self.unlabeled_image.image_path.name,
-            original_image_base64=self.unlabeled_image.image_path.load_as_base64(),
-            noisy_image_base64=self.unlabeled_image.noisy_base64(
-                self.label_manager.noise_fn
-            ),
+            original_image_name=updated_maker.image_path.name,
+            noisy_image_name=updated_maker.image_path.name,
+            original_image_base64=updated_maker.image_path.load_as_base64(),
+            noisy_image_base64=updated_maker.noisy_base64(self.label_manager.noise_fn),
         )
 
     # ----------------------------------------------------
