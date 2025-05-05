@@ -87,6 +87,9 @@ class LabelAppFactory:
 
             # Key handler integration
             def on_keyboard(key: Key | KeyCode):
+                if not page.window.focused:
+                    return
+
                 silent_focus.value = ""
                 silent_focus.focus()
 

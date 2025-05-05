@@ -29,7 +29,7 @@ class ImagePairControlView(ft.Column):
 
         # --- Data ---
         self.unlabeled_image = self.label_manager.new_unlabeled()
-        self.labeled_image_pairs = self.label_manager.get_labeled_image_pairs()
+        self.labeled_image_pairs = self.label_manager.get_entries()
         self._review_index = 0
 
         # --- UI Controls ---
@@ -37,9 +37,7 @@ class ImagePairControlView(ft.Column):
             original_image_name=self.unlabeled_image.image_path.name,
             noisy_image_name=self.unlabeled_image.image_path.name,
             original_image_base64=self.unlabeled_image.image_path.load_as_base64(),
-            noisy_image_base64=self.unlabeled_image.noisy_base64(
-                ImageNoiser.add_jpeg_compression
-            ),
+            noisy_image_base64=self.unlabeled_image.noisy_base64(),
             color_scheme=self.color_scheme,
         )
 
@@ -119,7 +117,7 @@ class ImagePairControlView(ft.Column):
             original_image_name=updated_maker.image_path.name,
             noisy_image_name=updated_maker.image_path.name,
             original_image_base64=updated_maker.image_path.load_as_base64(),
-            noisy_image_base64=updated_maker.noisy_base64(self.label_manager.noise_fn),
+            noisy_image_base64=updated_maker.noisy_base64(self.label_manager.noise_fns),
         )
 
     # ----------------------------------------------------

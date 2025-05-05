@@ -28,11 +28,31 @@ class LabelingController(ft.Row):
         self.label_manager = label_manager
         initial_value = label_manager.get_severity()
 
-        self.noise_control = NoiseControl(
-            initial_value,
-            on_end_change=severity_update_callback,
-            color_scheme=self.color_scheme,
-        )
+        # self.noise_control = NoiseControl(
+        #     initial_value,
+        #     on_end_change=severity_update_callback,
+        #     color_scheme=self.color_scheme,
+        # )
+
+        self.threshold_sliders = []
+
+        # The currently displayed image pair
+        image_pair = self.pair_to_label
+
+        # The noise maker associated with this pair (you'll need to get it)
+        noisy_image_maker = self.label_manager.get_noisy_image_maker(image_pair)
+
+        # Previous thresholds, if any
+        existing_thresholds = self.label_manager.get_existing_thresholds(image_pair)
+
+        for noise_op in noisy_image_maker.noise_operations:
+            noise_name = noise_op.name
+
+            slider = NoiseControl(
+                label=f"Threshold for {noise_name}",
+                value=existing_thresholds.get(noise_name, 0.0),
+            )
+            self.threshold_sliders.append(slider)
 
         self.progress_area = LabelingProgress(
             value=label_manager.percentage_complete(),
