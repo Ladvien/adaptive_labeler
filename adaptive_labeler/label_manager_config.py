@@ -19,12 +19,13 @@ class LabelManagerConfig:
     allowed_exts: List[str] = field(
         default_factory=lambda: [".jpg", ".jpeg", ".png", ".gif"]
     )
-    noise_functions: List[Callable] = field(
+    noise_functions: List[Tuple[Callable, float]] = field(
         default_factory=lambda: [
             ImageNoiser.add_jpeg_compression,
             ImageNoiser.add_gaussian_noise,
         ]
     )
+    severity_defaults: dict[str, float] = field(default_factory=dict)
 
     severity: float = 0.0
 
@@ -33,14 +34,14 @@ class LabelManagerConfig:
 
     shuffle_images: bool = True
 
-    def get_noise_function(self, name: str) -> Optional[Callable]:
-        for fn in self.noise_functions:
-            if fn.__name__ == name:
-                return fn
-        return None
-
     def noise_function_names(self) -> List[str]:
         return [fn.__name__ for fn in self.noise_functions]
+
+    def noise_fns_and_defaults(self) -> List[Tuple[str, float]]:
+        return [
+            (fn.__name__, self.severity_defaults.get(fn.__name__, 0.0))
+            for fn in self.noise_functions
+        ]
 
     def __post_init__(self):
         if self.label_csv_path is None:

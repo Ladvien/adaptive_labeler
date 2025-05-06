@@ -67,9 +67,7 @@ class LabelWriter:
 class LabelManager:
     def __init__(self, config: LabelManagerConfig):
         self.config = config
-        self.noise_fn_names = config.noise_function_names()
 
-        print(f"Available noise functions: {self.noise_fn_names}")
         self.image_loader = ImageLoader(
             config.images_dir, shuffle=config.shuffle_images
         )
@@ -91,12 +89,12 @@ class LabelManager:
     def new_noisy_image_maker(self) -> NoisyImageMaker | None:
         try:
             while True:
-                noise_operations = [
-                    NosingOperation.from_str(fn, self.severity_value)
-                    for fn in self.noise_fn_names
-                ]
                 image_path = next(self.image_loader)
                 if str(image_path.path) not in self.labeled_image_paths:
+                    noise_operations = [
+                        NosingOperation.from_str(fn_name, default_threshold)
+                        for fn_name, default_threshold in self.config.noise_fns_and_defaults()
+                    ]
                     return NoisyImageMaker(
                         image_path,
                         self.config.output_dir,
@@ -128,7 +126,7 @@ class LabelManager:
                 threshold = row.get(f"fn_{i}_threshold")
 
                 if pd.notna(fn_name) and pd.notna(threshold):
-                    if fn_name in self.noise_fn_names:
+                    if fn_name in self.config.noise_function_names():
                         noise_operations.append(
                             NosingOperation.from_str(fn_name, float(threshold))
                         )

@@ -22,31 +22,32 @@ class LabelingController(ft.Row):
         mode: Literal["labeling", "review"] = "labeling",
         color_scheme: Optional[ft.ColorScheme] = None,
         severity_update_callback: Optional[Callable] = None,
+        noisy_image_maker: Optional[NoisyImageMaker] = None,  # 🔥 IMPORTANT
     ):
         super().__init__()
 
         self.color_scheme = color_scheme or self.DEFAULT_COLOR_SCHEME
         self.label_manager = label_manager
+        self.mode = mode
+        self.noisy_image_maker = noisy_image_maker
 
         self.threshold_sliders = []
 
-        # NoisyImageMaker for this image
-        noisy_image_maker: NoisyImageMaker = self.label_manager.new_noisy_image_maker()
+        # 🔥 If no image passed in, don't build sliders
+        if self.noisy_image_maker:
+            for noise_op in self.noisy_image_maker.noise_operations:
+                noise_name = noise_op.name
+                initial_value = noise_op.severity or 0.0
 
-        # --- Build one slider per noise operation ---
-        for noise_op in noisy_image_maker.noise_operations:
-            noise_name = noise_op.name
-            initial_value = 0.5  # TODO: Should be added to config.
+                slider = NoiseControl(
+                    label=noise_name,  # 🔥 Label must be just the function name!
+                    value=initial_value,
+                    color_scheme=self.color_scheme,
+                    on_end_change=severity_update_callback,
+                )
+                self.threshold_sliders.append(slider)
 
-            slider = NoiseControl(
-                label=f"Threshold for {noise_name}",
-                value=initial_value,
-                color_scheme=self.color_scheme,
-                on_end_change=severity_update_callback,  # Optional callback
-            )
-            self.threshold_sliders.append(slider)
-
-        # --- Progress bar ---
+        # --- Progress ---
         self.progress_area = LabelingProgress(
             value=label_manager.percentage_complete(),
             progress_text=f"{label_manager.labeled_count()}/{label_manager.total()} labeled",

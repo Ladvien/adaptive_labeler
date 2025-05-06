@@ -19,4 +19,9 @@ class LabelerConfig:
 
     def __post_init__(self):
         if self.label_manager_config is None:
-            self.label_manager_config = LabelManagerConfig()
+            self.label_manager_config = LabelManagerConfig(
+                severity_defaults={
+                    "add_jpeg_compression": 0.3,
+                    "add_gaussian_noise": 0.1,
+                },
+            )

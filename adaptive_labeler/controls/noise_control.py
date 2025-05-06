@@ -17,6 +17,7 @@ class NoiseControl(ft.Column):
         min_val: float = 0.0,
         max_val: float = 1.0,
         step: float = 0.001,
+        default_value: float = 0.7,
         on_end_change: Optional[Callable[[ft.ControlEvent, float], None]] = None,
         color_scheme: Optional[ft.ColorScheme] = None,
     ):
@@ -25,6 +26,7 @@ class NoiseControl(ft.Column):
         self.min_val = min_val
         self.max_val = max_val
         self.step = step
+        self.default_value = default_value
         self.on_change_end = on_end_change
         self.color_scheme = color_scheme or self.DEFAULT_COLOR_SCHEME
 
@@ -45,14 +47,16 @@ class NoiseControl(ft.Column):
             expand=True,
         )
 
-        self.controls = [self.value_label, self.slider]
+        self.controls = [
+            self.value_label,
+            self.slider,
+        ]
         self.spacing = 5
         self.alignment = ft.MainAxisAlignment.CENTER
-
-    # --- Utility methods ---
+        self.value = value
 
     def _format_label(self, value: float) -> str:
-        return f"Noise Level: {round(value * 100, 2)}%"
+        return f"{self.label}: {round(value * 100, 2)}%"
 
     def _clamp(self, value: float) -> float:
         return min(max(value, self.min_val), self.max_val)
@@ -80,14 +84,3 @@ class NoiseControl(ft.Column):
     def _on_end_change(self, e: ft.ControlEvent):
         if self.on_change_end:
             self.on_change_end(e, self.value)
-
-    # --- Public API ---
-
-    @property
-    def value(self) -> float:
-        return self._quantize(self.slider.value)
-
-    @value.setter
-    def value(self, new_value: float):
-        self.slider.value = self._quantize(new_value)
-        self.update_display()

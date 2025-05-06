@@ -45,7 +45,8 @@ class ImagePairControlView(ft.Column):
             self.label_manager,
             "labeling",
             color_scheme=self.color_scheme,
-            severity_update_callback=self._on_slider_update,  # Hook to update thresholds
+            severity_update_callback=self._on_slider_update,
+            noisy_image_maker=self.noisy_image_maker,
         )
 
         # Visibility per mode
