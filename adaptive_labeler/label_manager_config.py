@@ -25,9 +25,12 @@ class LabelManagerConfig:
             ImageNoiser.add_gaussian_noise,
         ]
     )
-    severity_defaults: dict[str, float] = field(default_factory=dict)
-
-    severity: float = 0.0
+    severity_defaults: dict[str, float] = field(
+        default_factory=lambda: {
+            "add_jpeg_compression": 0.5,
+            "add_gaussian_noise": 0.5,
+        }
+    )
 
     samples_per_image: int = 5
     image_samples: int | None = None
@@ -67,5 +70,3 @@ class LabelManagerConfig:
             raise ValueError("Image samples must be a positive integer.")
         if self.samples_per_image <= 0:
             raise ValueError("Samples per image must be a positive integer.")
-        if self.severity < 0 or self.severity > 1:
-            raise ValueError("Severity must be between 0 and 1.")

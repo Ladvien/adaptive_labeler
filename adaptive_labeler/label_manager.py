@@ -76,15 +76,6 @@ class LabelManager:
         )
         self.labeled_image_paths = self.label_writer.get_labels()
         self.total_samples = config.image_samples or len(self.image_loader)
-        self.severity_value = config.severity
-
-    def set_severity(self, severity: float) -> None:
-        if not (0 <= severity <= 1):
-            raise ValueError("Severity must be between 0 and 1.")
-        self.severity_value = severity
-
-    def get_severity(self) -> float:
-        return self.severity_value
 
     def new_noisy_image_maker(self) -> NoisyImageMaker | None:
         try:
