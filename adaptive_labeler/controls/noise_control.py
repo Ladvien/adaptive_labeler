@@ -12,6 +12,7 @@ class NoiseControl(ft.Column):
 
     def __init__(
         self,
+        label: str,
         value: float = 1.0,
         min_val: float = 0.0,
         max_val: float = 1.0,
@@ -20,7 +21,7 @@ class NoiseControl(ft.Column):
         color_scheme: Optional[ft.ColorScheme] = None,
     ):
         super().__init__()
-
+        self.label = label
         self.min_val = min_val
         self.max_val = max_val
         self.step = step
@@ -33,6 +34,7 @@ class NoiseControl(ft.Column):
         )
 
         self.slider = ft.Slider(
+            label=self.label,
             min=self.min_val,
             max=self.max_val,
             value=self._quantize(value),

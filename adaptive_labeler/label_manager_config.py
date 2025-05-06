@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Tuple
+from rich import print
 
 from image_utils.image_noiser import ImageNoiser
 
@@ -19,7 +20,10 @@ class LabelManagerConfig:
         default_factory=lambda: [".jpg", ".jpeg", ".png", ".gif"]
     )
     noise_functions: List[Callable] = field(
-        default_factory=lambda: [ImageNoiser.add_jpeg_compression]
+        default_factory=lambda: [
+            ImageNoiser.add_jpeg_compression,
+            ImageNoiser.add_gaussian_noise,
+        ]
     )
 
     severity: float = 0.0
@@ -28,6 +32,15 @@ class LabelManagerConfig:
     image_samples: int | None = None
 
     shuffle_images: bool = True
+
+    def get_noise_function(self, name: str) -> Optional[Callable]:
+        for fn in self.noise_functions:
+            if fn.__name__ == name:
+                return fn
+        return None
+
+    def noise_function_names(self) -> List[str]:
+        return [fn.__name__ for fn in self.noise_functions]
 
     def __post_init__(self):
         if self.label_csv_path is None:

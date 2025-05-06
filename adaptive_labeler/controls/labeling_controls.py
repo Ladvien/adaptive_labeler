@@ -3,6 +3,7 @@ from adaptive_labeler.controls.instructions import Instructions
 from adaptive_labeler.controls.labeling_progress import LabelingProgress
 from adaptive_labeler.controls.noise_control import NoiseControl
 from adaptive_labeler.label_manager import LabelManager
+from adaptive_labeler.noisy_image_maker import NoisyImageMaker
 import flet as ft
 
 
@@ -26,53 +27,39 @@ class LabelingController(ft.Row):
 
         self.color_scheme = color_scheme or self.DEFAULT_COLOR_SCHEME
         self.label_manager = label_manager
-        initial_value = label_manager.get_severity()
-
-        # self.noise_control = NoiseControl(
-        #     initial_value,
-        #     on_end_change=severity_update_callback,
-        #     color_scheme=self.color_scheme,
-        # )
 
         self.threshold_sliders = []
 
-        # The currently displayed image pair
-        image_pair = self.pair_to_label
+        # NoisyImageMaker for this image
+        noisy_image_maker: NoisyImageMaker = self.label_manager.new_noisy_image_maker()
 
-        # The noise maker associated with this pair (you'll need to get it)
-        noisy_image_maker = self.label_manager.get_noisy_image_maker(image_pair)
-
-        # Previous thresholds, if any
-        existing_thresholds = self.label_manager.get_existing_thresholds(image_pair)
-
+        # --- Build one slider per noise operation ---
         for noise_op in noisy_image_maker.noise_operations:
             noise_name = noise_op.name
+            initial_value = 0.5  # TODO: Should be added to config.
 
             slider = NoiseControl(
                 label=f"Threshold for {noise_name}",
-                value=existing_thresholds.get(noise_name, 0.0),
+                value=initial_value,
+                color_scheme=self.color_scheme,
+                on_end_change=severity_update_callback,  # Optional callback
             )
             self.threshold_sliders.append(slider)
 
+        # --- Progress bar ---
         self.progress_area = LabelingProgress(
             value=label_manager.percentage_complete(),
             progress_text=f"{label_manager.labeled_count()}/{label_manager.total()} labeled",
             color_scheme=self.color_scheme,
         )
 
-        # Placeholder: uncomment when mode toggle is ready
-        # self.mode_toggle = ft.ElevatedButton(
-        #     text="Switch to Review",
-        #     on_click=on_mode_toggle,
-        # )
-
+        # --- Layout ---
         self.controls = [
             ft.Container(
                 Instructions(color_scheme=self.color_scheme), padding=10, expand=True
             ),
-            ft.Container(self.noise_control, padding=10, expand=True),
+            ft.Column(self.threshold_sliders, expand=True),
             ft.Container(self.progress_area, padding=10, expand=True),
-            # ft.Container(self.mode_toggle, padding=10),
         ]
 
     def update_progress(self):

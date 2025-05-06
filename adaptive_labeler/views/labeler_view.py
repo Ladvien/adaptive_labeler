@@ -1,12 +1,14 @@
 from pathlib import Path
 import time
-from adaptive_labeler.noisy_image_maker import NoisyImageMaker
 import flet as ft
 from image_utils.image_noiser import ImageNoiser
+from image_utils.noising_operation import NosingOperation
 from pynput import keyboard
 from pynput.keyboard import Key, KeyCode
+from rich import print
 
 from adaptive_labeler.label_manager import LabelManager
+from adaptive_labeler.noisy_image_maker import NoisyImageMaker
 from adaptive_labeler.controls.image_viewer_panel import ImageViewerPanel
 from adaptive_labeler.controls.labeling_controls import LabelingController
 from adaptive_labeler.controls.review_controls import ReviewControls
@@ -18,26 +20,24 @@ class ImagePairControlView(ft.Column):
         label_manager: LabelManager,
         color_scheme=None,
         start_mode="labeling",
-        minimum_slider_value=0.01,
     ):
         super().__init__()
 
         self.label_manager = label_manager
         self.color_scheme = color_scheme or ft.ColorScheme()
         self.mode = start_mode
-        self.minimum_slider_value = minimum_slider_value
 
         # --- Data ---
-        self.unlabeled_image = self.label_manager.new_unlabeled()
-        self.labeled_image_pairs = self.label_manager.get_entries()
+        self.noisy_image_maker = self.label_manager.new_noisy_image_maker()
+        self.labeled_image_pairs = self.label_manager.retrieve_records()
         self._review_index = 0
 
         # --- UI Controls ---
         self.image_panel = ImageViewerPanel(
-            original_image_name=self.unlabeled_image.image_path.name,
-            noisy_image_name=self.unlabeled_image.image_path.name,
-            original_image_base64=self.unlabeled_image.image_path.load_as_base64(),
-            noisy_image_base64=self.unlabeled_image.noisy_base64(),
+            original_image_name=self.noisy_image_maker.image_path.name,
+            noisy_image_name=self.noisy_image_maker.image_path.name,
+            original_image_base64=self.noisy_image_maker.image_path.load_as_base64(),
+            noisy_image_base64=self.noisy_image_maker.noisy_base64(),
             color_scheme=self.color_scheme,
         )
 
@@ -45,12 +45,11 @@ class ImagePairControlView(ft.Column):
             self.label_manager,
             "labeling",
             color_scheme=self.color_scheme,
-            severity_update_callback=self.on_slider_update,
+            severity_update_callback=self._on_slider_update,  # Hook to update thresholds
         )
 
         # Visibility per mode
         self.labeling_controls.visible = self.mode == "labeling"
-        # self.review_controls.visible = self.mode == "review" # TODO: uncomment when ready
 
         self.expand = True
         self.controls = [
@@ -59,7 +58,6 @@ class ImagePairControlView(ft.Column):
                 ft.Column(
                     [
                         self.labeling_controls,
-                        # self.review_controls, # TODO: uncomment when ready
                     ]
                 ),
                 padding=20,
@@ -81,54 +79,53 @@ class ImagePairControlView(ft.Column):
     def toggle_mode(self, e=None):
         self.mode = "review" if self.mode == "labeling" else "labeling"
         self.labeling_controls.visible = self.mode == "labeling"
-        self.review_controls.visible = self.mode == "review"
+        # self.review_controls.visible = self.mode == "review"
         self.update()
 
     # ----------------------------------------------------
-    # NOISE / SEVERITY HANDLING
+    # SLIDER / NOISE HANDLING
 
-    def on_slider_update(self, e, value):
-        self.label_manager.set_severity(value)
+    def _on_slider_update(self, e=None, value=None):
+        """Called when any slider changes."""
         self._resample_noisy_image()
 
-    def increase_noise(self, shift: bool = False):
-        increment = 0.05 if shift else 0.01
-        self._change_severity(delta=increment)
+    def _current_noising_operations(self) -> dict[str, NosingOperation]:
+        """Collect thresholds from all sliders."""
+        noising_ops: dict[str, NosingOperation] = {}
+        for control in self.labeling_controls.threshold_sliders:
+            if isinstance(control, ft.Slider):
+                noising_ops[control.label] = NosingOperation.from_str(
+                    control.label, control.value
+                )
 
-    def decrease_noise(self, shift: bool = False):
-        decrement = -0.05 if shift else -0.01
-        self._change_severity(delta=decrement)
-
-    def _change_severity(self, delta: float):
-        new_value = self.label_manager.get_severity() + delta
-        new_value = max(self.minimum_slider_value, min(new_value, 1.0))
-        self.label_manager.set_severity(new_value)
-        self.labeling_controls.noise_control.value = new_value
-        self._resample_noisy_image()
+        return noising_ops
 
     def _resample_noisy_image(self):
+        """Update the noisy image preview based on current thresholds."""
         updated_maker = NoisyImageMaker(
-            self.unlabeled_image.image_path,
+            self.noisy_image_maker.image_path,
             self.label_manager.config.output_dir,
-            self.label_manager.get_severity(),
+            self._current_noising_operations(),
         )
 
         self.image_panel.update_images(
             original_image_name=updated_maker.image_path.name,
             noisy_image_name=updated_maker.image_path.name,
             original_image_base64=updated_maker.image_path.load_as_base64(),
-            noisy_image_base64=updated_maker.noisy_base64(self.label_manager.noise_fns),
+            noisy_image_base64=updated_maker.noisy_base64(),
         )
 
     # ----------------------------------------------------
     # LABELING
 
     def _label_image(self):
-        self.label_manager.save_label(self.unlabeled_image)
+        noisy_image_maker = self.label_manager.new_noisy_image_maker()
+
+        self.label_manager.label_writer.record(noisy_image_maker)
         self._load_next_image()
 
     def _load_next_image(self):
-        self.unlabeled_image = self.label_manager.new_unlabeled()
+        self.noisy_image_maker = self.label_manager.new_noisy_image_maker()
         self._resample_noisy_image()
         self.labeling_controls.update_progress()
 
@@ -154,11 +151,11 @@ class ImagePairControlView(ft.Column):
             pair.original_image_base64,
             pair.noisy_image_base64,
         )
-        self.review_controls.update_label(pair.threshold)
+        # self.review_controls.update_label(pair.threshold)  # Rework if needed
         return True
 
     # ----------------------------------------------------
-    # KEYBOARD
+    # KEYBOARD HANDLING
 
     def _can_act(self) -> bool:
         now = time.time()
@@ -169,7 +166,6 @@ class ImagePairControlView(ft.Column):
 
     def _remove_label_image(self):
         self.label_manager.delete_last_label()
-        # Reload a new image
         self._load_next_image()
 
     def handle_keyboard_event(self, key: Key | KeyCode) -> bool:
@@ -186,12 +182,6 @@ class ImagePairControlView(ft.Column):
                 return True
             elif key == Key.left:
                 self._remove_label_image()
-                return True
-            elif key == Key.up:
-                self.increase_noise(self.shift_pressed)
-                return True
-            elif key == Key.down:
-                self.decrease_noise(self.shift_pressed)
                 return True
         else:
             return self._handle_review_keys(key)

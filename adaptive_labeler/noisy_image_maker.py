@@ -30,7 +30,7 @@ class NoisyImageMaker:
         cls,
         image_path: str,
         output_path: str,
-        thresholds: float,
+        thresholds: list[float],
         noise_fns: list[str],
     ) -> "NoisyImageMaker":
         noise_functions = [getattr(ImageNoiser, name) for name in noise_fns]

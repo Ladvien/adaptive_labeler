@@ -1,4 +1,6 @@
+from random import uniform
 from typing import Callable
+from uuid import uuid4
 from image_utils.noising_operation import NosingOperation
 from adaptive_labeler.noisy_image_maker import NoisyImageMaker
 import pandas as pd
@@ -11,26 +13,6 @@ from adaptive_labeler.label_manager_config import (
 )
 from image_utils.image_loader import ImageLoader
 from image_utils.image_path import ImagePath
-
-
-@dataclass
-class ImageLabelRecord:
-    original_image_path: str
-    noise_operations: list[NosingOperation] = field(default_factory=list)
-
-    def to_row(self):
-        data = [self.original_image_path]
-        for op in self.noise_operations:
-            data.append(op.name)
-            data.append(op.severity)
-        return data
-
-    def to_dict(self) -> dict:
-        data = {"original_image_path": self.original_image_path}
-        for idx, op in enumerate(self.noise_operations, start=1):
-            data[f"fn_{idx}"] = op.name
-            data[f"fn_{idx}_threshold"] = op.severity
-        return data
 
 
 class LabelWriter:
@@ -62,9 +44,16 @@ class LabelWriter:
 
         assert list(self.df.columns) == self.columns
 
-    def record(self, labeled_image: ImageLabelRecord):
+    def record(self, noisy_image_maker: NoisyImageMaker) -> None:
         new_row = {col: None for col in self.columns}
-        new_row.update(labeled_image.to_dict())
+        new_row["original_image_path"] = noisy_image_maker.image_path.path
+
+        for idx, op in enumerate(noisy_image_maker.noise_operations):
+            fn_col = f"fn_{idx + 1}"
+            threshold_col = f"fn_{idx + 1}_threshold"
+            new_row[fn_col] = op.name
+            new_row[threshold_col] = op.severity or 0
+
         self.df.loc[len(self.df)] = new_row
         self.df.to_csv(self.path, index=False)
 
@@ -78,8 +67,9 @@ class LabelWriter:
 class LabelManager:
     def __init__(self, config: LabelManagerConfig):
         self.config = config
-        self.noise_fns = config.noise_functions
+        self.noise_fn_names = config.noise_function_names()
 
+        print(f"Available noise functions: {self.noise_fn_names}")
         self.image_loader = ImageLoader(
             config.images_dir, shuffle=config.shuffle_images
         )
@@ -98,59 +88,19 @@ class LabelManager:
     def get_severity(self) -> float:
         return self.severity_value
 
-    # TODO: Rework to "Generate Labels"
-    # def save_label(
-    #     self,
-    #     image_maker: NoisyImageMaker,
-    # ) -> None:
-    #     if str(image_maker.image_path.path) in self.labeled_image_paths:
-    #         raise Exception(
-    #             f"This image has already been labeled: {image_maker.image_path.path}"
-    #         )
-
-    #     new_noisy_images = []
-
-    #     for _ in range(self.config.samples_per_image):
-    #         # Generate a new noisy image
-    #         noise_level = uniform(0, 1.0)
-    #         severity = self.get_severity()
-
-    #         print(f"Original image path: {image_maker}")
-    #         print(f"Noise level: {noise_level}")
-
-    #         noisy_image_path = self.config.output_dir / f"{uuid4()}.jpg"
-
-    #         maker = NoisyImageMaker(
-    #             image_maker.image_path,
-    #             ImagePath(noisy_image_path),
-    #             noise_level,
-    #         )
-
-    #         noisy_image = maker.noisy_image(self.noise_fns)
-    #         noisy_image.save(noisy_image_path)
-
-    #         labeled_noisy_image = LabeledImage(
-    #             original_image_path=str(image_maker.image_path.path),
-    #             noisy_image_path=str(noisy_image_path),
-    #             severity=severity,
-    #             noise_functions=[self.noise_fns.__name__],
-    #         )
-
-    #         self.label_writer.record(labeled_noisy_image)
-    #         new_noisy_images.append(noisy_image_path)
-    #         self.labeled_image_paths.append(str(maker.image_path))
-    #         self.labeled_image_paths = list(set(self.labeled_image_paths))
-
-    def new_unlabeled(self) -> NoisyImageMaker | None:
+    def new_noisy_image_maker(self) -> NoisyImageMaker | None:
         try:
             while True:
+                noise_operations = [
+                    NosingOperation.from_str(fn, self.severity_value)
+                    for fn in self.noise_fn_names
+                ]
                 image_path = next(self.image_loader)
                 if str(image_path.path) not in self.labeled_image_paths:
                     return NoisyImageMaker(
                         image_path,
                         self.config.output_dir,
-                        self.get_severity(),
-                        self.config.noise_functions,
+                        noise_operations,
                     )
         except StopIteration:
             return None
@@ -169,29 +119,36 @@ class LabelManager:
     def total(self) -> int:
         return self.total_samples
 
-    def get_entries(self) -> list[NoisyImageMaker]:
+    def retrieve_records(self) -> list[NoisyImageMaker]:
         entries = []
         for _, row in self.label_writer.df.iterrows():
             noise_operations = []
             for i in range(1, self.label_writer.max_operations + 1):
-                fn = row.get(f"fn_{i}")
+                fn_name = row.get(f"fn_{i}")
                 threshold = row.get(f"fn_{i}_threshold")
-                if pd.notna(fn) and pd.notna(threshold):
-                    noise_operations.append(
-                        NosingOperation(
-                            fn=self.noise_fns[fn],  # get function from name
-                            severity=threshold,
+
+                if pd.notna(fn_name) and pd.notna(threshold):
+                    if fn_name in self.noise_fn_names:
+                        noise_operations.append(
+                            NosingOperation.from_str(fn_name, float(threshold))
                         )
-                    )
+                    else:
+                        print(
+                            f"Warning: function '{fn_name}' not found in noise_fn_names."
+                        )
+
             entries.append(
-                ImageLabelRecord(
-                    original_image_path=row["original_image_path"],
+                NoisyImageMaker(
+                    image_path=ImagePath(row["original_image_path"]),
+                    output_path=self.config.output_dir,
                     noise_operations=noise_operations,
                 )
             )
 
+        return entries
+
     def set_noise_fn(self, fn: Callable):
-        self.noise_fns = fn
+        self.noise_fn_names = fn
 
     def delete_last_label(self) -> bool:
         """
