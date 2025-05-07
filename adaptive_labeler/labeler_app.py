@@ -9,7 +9,7 @@ import threading
 import time
 from adaptive_labeler.color_scheme import LabelerColorScheme
 from adaptive_labeler.label_manager import LabelManager
-from adaptive_labeler.views.labeler_view import ImagePairControlView
+from adaptive_labeler.views.image_pair_control_view import ImagePairControlView
 from adaptive_labeler import LabelerConfig, LabelManagerConfig
 
 

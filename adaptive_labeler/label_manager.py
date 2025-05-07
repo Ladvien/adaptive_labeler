@@ -86,11 +86,12 @@ class LabelManager:
                         NosingOperation.from_str(fn_name, default_threshold)
                         for fn_name, default_threshold in self.config.noise_fns_and_defaults()
                     ]
-                    return NoisyImageMaker(
+                    maker = NoisyImageMaker(
                         image_path,
                         self.config.output_dir,
                         noise_operations,
                     )
+                    return maker
         except StopIteration:
             return None
 

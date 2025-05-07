@@ -90,9 +90,20 @@ class ImagePairControlView(ft.Column):
         """Collect thresholds from all sliders."""
         return self.labeling_controls.get_noising_operations()
 
+    def _current_noisy_image_maker(self):
+        ops = self.labeling_controls.get_noising_operations()
+        return NoisyImageMaker(
+            self.noisy_image_maker.image_path,
+            self.label_manager.config.output_dir,
+            ops.values(),
+        )
+
     def _resample_noisy_image(self):
         """Update the noisy image preview based on current thresholds."""
+        print("Resampling noisy image...")
         updated_maker = self._current_noisy_image_maker()
+
+        print(updated_maker)
 
         self.image_panel.update_images(
             original_image_name=updated_maker.image_path.name,
@@ -153,13 +164,6 @@ class ImagePairControlView(ft.Column):
     def _remove_label_image(self):
         self.label_manager.delete_last_label()
         self._load_next_image()
-
-    def _current_noisy_image_maker(self):
-        return NoisyImageMaker(
-            self.noisy_image_maker.image_path,
-            self.label_manager.config.output_dir,
-            self.labeling_controls.get_noising_operations(),
-        )
 
     def handle_keyboard_event(self, key: Key | KeyCode) -> bool:
         if not self._can_act():
