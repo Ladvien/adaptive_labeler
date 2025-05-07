@@ -19,7 +19,6 @@ class NoiseControl(ft.Column):
         min_val: float = 0.0,
         max_val: float = 1.0,
         step: float = 0.001,
-        default_value: float = 0.7,
         on_end_change: Optional[Callable] = None,
         color_scheme: Optional[ft.ColorScheme] = None,
         debounce_seconds: float = 0.2,
@@ -29,7 +28,6 @@ class NoiseControl(ft.Column):
         self.min_val = min_val
         self.max_val = max_val
         self.step = step
-        self.default_value = default_value
         self.color_scheme = color_scheme or self.DEFAULT_COLOR_SCHEME
 
         self.value_label = ft.Text(
@@ -38,7 +36,7 @@ class NoiseControl(ft.Column):
         )
 
         self.slider = ft.Slider(
-            label=self.label,
+            # label=self.label,
             min=self.min_val,
             max=self.max_val,
             value=value,
@@ -56,6 +54,12 @@ class NoiseControl(ft.Column):
         self._debounce_timer = None
 
         self._external_callback = on_end_change
+
+    def set_value(self, value: float):
+        self.slider.value = value
+        self.value_label.value = self._format_label(value)
+        self.slider.update()
+        self.value_label.update()
 
     def _format_label(self, value: float) -> str:
         return f"{self.label}: {round(value * 100, 2)}%"

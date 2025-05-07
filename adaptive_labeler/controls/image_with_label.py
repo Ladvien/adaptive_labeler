@@ -1,5 +1,4 @@
 import flet as ft
-from image_utils.image_path import ImagePath
 
 
 class ImageWithLabel(ft.Column):

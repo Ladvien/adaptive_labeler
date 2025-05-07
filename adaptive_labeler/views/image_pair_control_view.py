@@ -1,17 +1,13 @@
-from pathlib import Path
 import time
 import flet as ft
-from image_utils.image_noiser import ImageNoiser
 from image_utils.noising_operation import NosingOperation
 from image_utils.noisy_image_maker import NoisyImageMaker
 from labeling.label_manager import LabelManager
-from pynput import keyboard
 from pynput.keyboard import Key, KeyCode
 from rich import print
 
 from adaptive_labeler.controls.image_viewer_panel import ImageViewerPanel
 from adaptive_labeler.controls.labeling_controls import LabelingController
-from adaptive_labeler.controls.review_controls import ReviewControls
 
 
 class ImagePairControlView(ft.Column):
@@ -165,23 +161,39 @@ class ImagePairControlView(ft.Column):
         if not self._can_act():
             return False
 
+        # --- Mode / labeling actions ---
         key_action = {
             Key.tab: self.toggle_mode,
             Key.right: self._label_image,
             Key.left: self._remove_label_image,
         }
+
         action = key_action.get(key)
         if action:
             action()
+            return True
+
+        # --- Master slider adjustment ---
+        if key == Key.up:
+            self._adjust_master_slider(0.01)
+            return True
+
+        if key == Key.down:
+            self._adjust_master_slider(-0.01)
+            return True
 
         return False
-
-    def _on_press(self, key):
-        if key in (Key.shift, Key.shift_r):
-            self.shift_pressed = True
-        else:
-            self.handle_keyboard_event(key)
 
     def _on_release(self, key):
         if key in (Key.shift, Key.shift_r):
             self.shift_pressed = False
+
+    def _adjust_master_slider(self, increment: float):
+        """Adjust the master slider up/down by increment amount."""
+        master = self.labeling_controls.master_slider
+        new_value = master.slider.value + increment
+        new_value = min(
+            max(new_value, master.min_val), master.max_val
+        )  # Clamp to range
+        master.set_value(new_value)
+        self.labeling_controls.distribute_master_severity(master_value=new_value)
