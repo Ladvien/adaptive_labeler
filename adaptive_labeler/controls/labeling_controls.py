@@ -72,10 +72,10 @@ class LabelingController(ft.Row):
 
     def get_noising_operations(self) -> dict[str, NosingOperation]:
         noising_ops: dict[str, NosingOperation] = {}
-        for control in self.threshold_sliders:
-            if isinstance(control, NoiseControl):
-                noising_ops[control.label] = NosingOperation.from_str(
-                    control.label, int(control.slider.value)
+        for noise_control in self.threshold_sliders:
+            if isinstance(noise_control, NoiseControl):
+                noising_ops[noise_control.label] = NosingOperation.from_str(
+                    noise_control.label, float(noise_control.slider.value)
                 )
 
         return noising_ops

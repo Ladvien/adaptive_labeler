@@ -67,9 +67,6 @@ class ImagePairControlView(ft.Column):
         self._last_action_time = 0.0
         self._debounce_interval = 0.3
 
-        # Keyboard 🔥
-        self._start_keyboard_listener()
-
     # ----------------------------------------------------
     # MODE TOGGLE
 
@@ -116,9 +113,8 @@ class ImagePairControlView(ft.Column):
     # LABELING
 
     def _label_image(self):
-        noisy_image_maker = self.label_manager.new_noisy_image_maker()
-
-        self.label_manager.label_writer.record(noisy_image_maker)
+        updated_maker = self._current_noisy_image_maker()
+        self.label_manager.label_writer.record(updated_maker)
         self._load_next_image()
 
     def _load_next_image(self):
@@ -179,12 +175,6 @@ class ImagePairControlView(ft.Column):
             action()
 
         return False
-
-    def _start_keyboard_listener(self):
-        listener = keyboard.Listener(
-            on_press=self._on_press, on_release=self._on_release
-        )
-        listener.start()
 
     def _on_press(self, key):
         if key in (Key.shift, Key.shift_r):

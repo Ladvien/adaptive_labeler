@@ -32,6 +32,7 @@ class NoiseControl(ft.Column):
 
         self.value_label = ft.Text(
             self._format_label(value),
+            size=12,
             text_align=ft.TextAlign.CENTER,
         )
 
@@ -51,7 +52,7 @@ class NoiseControl(ft.Column):
             self.value_label,
             self.slider,
         ]
-        self.spacing = 5
+        self.spacing = 2
         self.alignment = ft.MainAxisAlignment.CENTER
         self.value = value
 
