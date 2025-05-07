@@ -18,7 +18,7 @@ class NoiseControl(ft.Column):
         max_val: float = 1.0,
         step: float = 0.001,
         default_value: float = 0.7,
-        on_end_change: Optional[Callable[[ft.ControlEvent, float], None]] = None,
+        on_end_change: Optional[Callable] = None,
         color_scheme: Optional[ft.ColorScheme] = None,
     ):
         super().__init__()
@@ -76,6 +76,9 @@ class NoiseControl(ft.Column):
         self.slider.update()
         self.value_label.update()
 
+        if self.on_change_end:
+            self.on_change_end(None, self.label, quantized_value)
+
     # --- Event handlers ---
 
     def _on_slider_change(self, e: ft.ControlEvent):
@@ -83,4 +86,6 @@ class NoiseControl(ft.Column):
 
     def _on_end_change(self, e: ft.ControlEvent):
         if self.on_change_end:
-            self.on_change_end(e, self.value)
+            self.on_change_end(e, self.label, self.slider.value)
+
+    # --- Public API ---

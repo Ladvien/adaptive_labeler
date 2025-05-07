@@ -37,11 +37,11 @@ class LabelingController(ft.Row):
         if self.noisy_image_maker:
             for noise_op in self.noisy_image_maker.noise_operations:
                 noise_name = noise_op.name
-                initial_value = noise_op.severity or 0.0
+                value = noise_op.severity or 0.0
 
                 slider = NoiseControl(
-                    label=noise_name,  # 🔥 Label must be just the function name!
-                    value=initial_value,
+                    label=noise_name,
+                    value=value,
                     color_scheme=self.color_scheme,
                     on_end_change=severity_update_callback,
                 )

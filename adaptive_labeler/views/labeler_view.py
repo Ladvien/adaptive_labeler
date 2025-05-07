@@ -86,7 +86,7 @@ class ImagePairControlView(ft.Column):
     # ----------------------------------------------------
     # SLIDER / NOISE HANDLING
 
-    def _on_slider_update(self, e=None, value=None):
+    def _on_slider_update(self, e: ft.ControlEvent, fn_name: str, value: float):
         """Called when any slider changes."""
         self._resample_noisy_image()
 
