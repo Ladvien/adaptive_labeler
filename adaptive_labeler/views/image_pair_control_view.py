@@ -3,12 +3,12 @@ import time
 import flet as ft
 from image_utils.image_noiser import ImageNoiser
 from image_utils.noising_operation import NosingOperation
+from image_utils.noisy_image_maker import NoisyImageMaker
+from labeling.label_manager import LabelManager
 from pynput import keyboard
 from pynput.keyboard import Key, KeyCode
 from rich import print
 
-from adaptive_labeler.label_manager import LabelManager
-from adaptive_labeler.noisy_image_maker import NoisyImageMaker
 from adaptive_labeler.controls.image_viewer_panel import ImageViewerPanel
 from adaptive_labeler.controls.labeling_controls import LabelingController
 from adaptive_labeler.controls.review_controls import ReviewControls

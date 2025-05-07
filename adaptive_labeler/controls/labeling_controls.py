@@ -1,11 +1,12 @@
 from typing import Callable, Literal, Optional
+import flet as ft
+from image_utils.noising_operation import NosingOperation
+from image_utils.noisy_image_maker import NoisyImageMaker
+from labeling.label_manager import LabelManager
+
 from adaptive_labeler.controls.instructions import Instructions
 from adaptive_labeler.controls.labeling_progress import LabelingProgress
 from adaptive_labeler.controls.noise_control import NoiseControl
-from adaptive_labeler.label_manager import LabelManager
-from adaptive_labeler.noisy_image_maker import NoisyImageMaker
-import flet as ft
-from image_utils.noising_operation import NosingOperation
 
 
 class LabelingController(ft.Row):
@@ -60,7 +61,7 @@ class LabelingController(ft.Row):
             ft.Container(
                 Instructions(color_scheme=self.color_scheme), padding=10, expand=True
             ),
-            ft.Column(self.threshold_sliders, expand=True),
+            ft.ListView(self.threshold_sliders, expand=True),
             ft.Container(self.progress_area, padding=10, expand=True),
         ]
 

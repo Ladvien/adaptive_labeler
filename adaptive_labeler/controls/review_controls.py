@@ -1,6 +1,6 @@
 from typing import Callable
-from adaptive_labeler.label_manager import NoisyImageMaker
 import flet as ft
+from image_utils.noisy_image_maker import NoisyImageMaker
 
 
 class ReviewControls(ft.Row):

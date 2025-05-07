@@ -4,13 +4,14 @@ from flet import NavigationRailDestination as NavDest
 from pynput import keyboard
 from pynput.keyboard import Key, KeyCode
 from rich import print
-
 import threading
 import time
+
 from adaptive_labeler.color_scheme import LabelerColorScheme
-from adaptive_labeler.label_manager import LabelManager
 from adaptive_labeler.views.image_pair_control_view import ImagePairControlView
-from adaptive_labeler import LabelerConfig, LabelManagerConfig
+from adaptive_labeler import LabelerConfig
+from labeling.label_manager import LabelManager
+from labeling.label_manager_config import LabelManagerConfig
 
 
 class LabelAppFactory:

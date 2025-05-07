@@ -1,4 +1,3 @@
-from adaptive_labeler.label_manager import NoisyImageMaker
 import flet as ft
 
 from adaptive_labeler.controls.image_pair_view import ImagePairViewer
