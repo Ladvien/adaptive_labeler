@@ -5,6 +5,7 @@ from adaptive_labeler.controls.noise_control import NoiseControl
 from adaptive_labeler.label_manager import LabelManager
 from adaptive_labeler.noisy_image_maker import NoisyImageMaker
 import flet as ft
+from image_utils.noising_operation import NosingOperation
 
 
 class LabelingController(ft.Row):
@@ -68,3 +69,13 @@ class LabelingController(ft.Row):
             value=self.label_manager.percentage_complete(),
             progress_text=f"{self.label_manager.labeled_count()}/{self.label_manager.total()} labeled",
         )
+
+    def get_noising_operations(self) -> dict[str, NosingOperation]:
+        noising_ops: dict[str, NosingOperation] = {}
+        for control in self.threshold_sliders:
+            if isinstance(control, ft.Slider):
+                noising_ops[control.label] = NosingOperation.from_str(
+                    control.label, control.value
+                )
+
+        return noising_ops

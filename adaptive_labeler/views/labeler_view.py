@@ -56,11 +56,7 @@ class ImagePairControlView(ft.Column):
         self.controls = [
             self.image_panel,
             ft.Container(
-                ft.Column(
-                    [
-                        self.labeling_controls,
-                    ]
-                ),
+                self.labeling_controls,
                 padding=20,
                 expand=1,
             ),
@@ -92,22 +88,11 @@ class ImagePairControlView(ft.Column):
 
     def _current_noising_operations(self) -> dict[str, NosingOperation]:
         """Collect thresholds from all sliders."""
-        noising_ops: dict[str, NosingOperation] = {}
-        for control in self.labeling_controls.threshold_sliders:
-            if isinstance(control, ft.Slider):
-                noising_ops[control.label] = NosingOperation.from_str(
-                    control.label, control.value
-                )
-
-        return noising_ops
+        return self.labeling_controls.get_noising_operations()
 
     def _resample_noisy_image(self):
         """Update the noisy image preview based on current thresholds."""
-        updated_maker = NoisyImageMaker(
-            self.noisy_image_maker.image_path,
-            self.label_manager.config.output_dir,
-            self._current_noising_operations(),
-        )
+        updated_maker = self._current_noisy_image_maker()
 
         self.image_panel.update_images(
             original_image_name=updated_maker.image_path.name,
@@ -169,23 +154,25 @@ class ImagePairControlView(ft.Column):
         self.label_manager.delete_last_label()
         self._load_next_image()
 
+    def _current_noisy_image_maker(self):
+        return NoisyImageMaker(
+            self.noisy_image_maker.image_path,
+            self.label_manager.config.output_dir,
+            self.labeling_controls.get_noising_operations(),
+        )
+
     def handle_keyboard_event(self, key: Key | KeyCode) -> bool:
         if not self._can_act():
             return False
 
-        if key == Key.tab:
-            self.toggle_mode()
-            return True
-
-        if self.mode == "labeling":
-            if key == Key.right:
-                self._label_image()
-                return True
-            elif key == Key.left:
-                self._remove_label_image()
-                return True
-        else:
-            return self._handle_review_keys(key)
+        key_action = {
+            Key.tab: self.toggle_mode,
+            Key.right: self._label_image,
+            Key.left: self._remove_label_image,
+        }
+        action = key_action.get(key)
+        if action:
+            action()
 
         return False
 
