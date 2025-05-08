@@ -5,20 +5,20 @@ from image_utils.noisy_image_maker import NoisyImageMaker
 from labeling.label_manager import LabelManager
 from pynput.keyboard import Key, KeyCode
 from rich import print
+import random
 
 from adaptive_labeler.controls.image_viewer_panel import ImageViewerPanel
 from adaptive_labeler.controls.labeling_controls import LabelingController
 
 
 class ImagePairControlView(ft.Column):
+    DEBOUNCE_INTERVAL = 0.3
+    MASTER_STEP = 0.01
+
     def __init__(
-        self,
-        label_manager: LabelManager,
-        color_scheme=None,
-        start_mode="labeling",
+        self, label_manager: LabelManager, color_scheme=None, start_mode="labeling"
     ):
         super().__init__()
-
         self.label_manager = label_manager
         self.color_scheme = color_scheme or ft.ColorScheme()
         self.mode = start_mode
@@ -29,7 +29,31 @@ class ImagePairControlView(ft.Column):
         self._review_index = 0
 
         # --- UI Controls ---
-        self.image_panel = ImageViewerPanel(
+        self.image_panel = self._build_image_panel()
+        self.labeling_controls = self._build_labeling_controls()
+
+        self.feedback_overlay = ft.Container(
+            bgcolor=ft.colors.GREEN_400,
+            opacity=0.0,
+            expand=1,
+        )
+
+        self.expand = True
+        self.controls = [
+            self.image_panel,
+            ft.Container(self.labeling_controls, padding=20, expand=5),
+            self.feedback_overlay,
+        ]
+
+        # --- State ---
+        self.shift_pressed = False
+        self._last_action_time = 0.0
+
+    # ----------------------------------------------------
+    # UI BUILDERS
+
+    def _build_image_panel(self) -> ImageViewerPanel:
+        return ImageViewerPanel(
             original_image_name=self.noisy_image_maker.image_path.name,
             noisy_image_name=self.noisy_image_maker.image_path.name,
             original_image_base64=self.noisy_image_maker.image_path.load_as_base64(),
@@ -37,31 +61,16 @@ class ImagePairControlView(ft.Column):
             color_scheme=self.color_scheme,
         )
 
-        self.labeling_controls = LabelingController(
+    def _build_labeling_controls(self) -> LabelingController:
+        controller = LabelingController(
             self.label_manager,
             "labeling",
             color_scheme=self.color_scheme,
             severity_update_callback=self._on_slider_update,
             noisy_image_maker=self.noisy_image_maker,
         )
-
-        # Visibility per mode
-        self.labeling_controls.visible = self.mode == "labeling"
-
-        self.expand = True
-        self.controls = [
-            self.image_panel,
-            ft.Container(
-                self.labeling_controls,
-                padding=20,
-                expand=1,
-            ),
-        ]
-
-        # --- State ---
-        self.shift_pressed = False
-        self._last_action_time = 0.0
-        self._debounce_interval = 0.3
+        controller.visible = self.mode == "labeling"
+        return controller
 
     # ----------------------------------------------------
     # MODE TOGGLE
@@ -69,33 +78,27 @@ class ImagePairControlView(ft.Column):
     def toggle_mode(self, e=None):
         self.mode = "review" if self.mode == "labeling" else "labeling"
         self.labeling_controls.visible = self.mode == "labeling"
-        # self.review_controls.visible = self.mode == "review"
         self.update()
 
     # ----------------------------------------------------
-    # SLIDER / NOISE HANDLING
+    # NOISE HANDLING
 
     def _on_slider_update(self, e: ft.ControlEvent, fn_name: str, value: float):
-        """Called when any slider changes."""
         self._resample_noisy_image()
 
     def _current_noising_operations(self) -> dict[str, NosingOperation]:
-        """Collect thresholds from all sliders."""
         return self.labeling_controls.get_noising_operations()
 
-    def _current_noisy_image_maker(self):
-        ops = self.labeling_controls.get_noising_operations()
+    def _current_noisy_image_maker(self) -> NoisyImageMaker:
         return NoisyImageMaker(
             self.noisy_image_maker.image_path,
             self.label_manager.config.output_dir,
-            ops.values(),
+            self._current_noising_operations().values(),
         )
 
     def _resample_noisy_image(self):
-        """Update the noisy image preview based on current thresholds."""
         print("Resampling noisy image...")
         updated_maker = self._current_noisy_image_maker()
-
         print(updated_maker)
 
         self.image_panel.update_images(
@@ -108,9 +111,16 @@ class ImagePairControlView(ft.Column):
     # ----------------------------------------------------
     # LABELING
 
-    def _label_image(self):
+    def _label_image(self, label: str) -> None:
         updated_maker = self._current_noisy_image_maker()
-        self.label_manager.label_writer.record(updated_maker)
+        self.label_manager.label_writer.record(updated_maker, label)
+        self._show_feedback(
+            color=ft.colors.GREEN_400 if label == "acceptable" else ft.colors.RED_400
+        )
+        self.labeling_controls.update_progress()
+
+    def _remove_label_image(self):
+        self.label_manager.delete_last_label()
         self._load_next_image()
 
     def _load_next_image(self):
@@ -121,18 +131,11 @@ class ImagePairControlView(ft.Column):
     # ----------------------------------------------------
     # REVIEW HANDLING
 
-    def _handle_review_keys(self, key: Key | KeyCode) -> bool:
+    def _review_step(self, direction: int):
         n = len(self.labeled_image_pairs)
         if n == 0:
-            return False
-
-        if key == Key.right:
-            self._review_index = (self._review_index + 1) % n
-        elif key == Key.left:
-            self._review_index = (self._review_index - 1) % n
-        else:
-            return False
-
+            return
+        self._review_index = (self._review_index + direction) % n
         pair = self.labeled_image_pairs[self._review_index]
         self.image_panel.update_images(
             pair.original_image_name,
@@ -140,60 +143,79 @@ class ImagePairControlView(ft.Column):
             pair.original_image_base64,
             pair.noisy_image_base64,
         )
-        # self.review_controls.update_label(pair.threshold)  # Rework if needed
-        return True
+
+        self.update()
 
     # ----------------------------------------------------
     # KEYBOARD HANDLING
 
     def _can_act(self) -> bool:
         now = time.time()
-        if now - self._last_action_time >= self._debounce_interval:
+        if now - self._last_action_time >= self.DEBOUNCE_INTERVAL:
             self._last_action_time = now
             return True
         return False
 
-    def _remove_label_image(self):
-        self.label_manager.delete_last_label()
-        self._load_next_image()
+    def _adjust_master_slider(self, increment: float):
+        master = self.labeling_controls.master_slider
+        new_value = min(
+            max(master.slider.value + increment, master.min_val), master.max_val
+        )
+        master.set_value(new_value)
+        self.labeling_controls.distribute_master_severity(master_value=new_value)
+        self._resample_noisy_image()
+
+    def _show_feedback(self, color: str = ft.colors.GREEN_400, duration: float = 0.2):
+        """Flash a color overlay to indicate a successful action."""
+        self.feedback_overlay.bgcolor = color
+        self.feedback_overlay.opacity = 0.5
+        self.update()
+
+        def hide_overlay():
+            time.sleep(duration)
+            self.feedback_overlay.opacity = 0.0
+            self.update()
+
+        # Run hide in a background thread so it doesn't block UI
+        import threading
+
+        threading.Thread(target=hide_overlay, daemon=True).start()
 
     def handle_keyboard_event(self, key: Key | KeyCode) -> bool:
         if not self._can_act():
             return False
 
-        # --- Mode / labeling actions ---
-        key_action = {
-            Key.tab: self.toggle_mode,
-            Key.right: self._label_image,
-            Key.left: self._remove_label_image,
-        }
+        step = self.MASTER_STEP if not self.shift_pressed else 5 * self.MASTER_STEP
 
-        action = key_action.get(key)
-        if action:
-            action()
-            return True
+        match key:
+            case Key.space:
+                random_value = round(random.uniform(0, 1.0), 3)
+                self.labeling_controls.master_slider.set_value(random_value)
+                self.labeling_controls.distribute_master_severity(
+                    master_value=random_value
+                )
+                self._resample_noisy_image()
+                return True
 
-        # --- Master slider adjustment ---
-        if key == Key.up:
-            self._adjust_master_slider(0.01)
-            return True
+            case Key.right:
+                self._label_image("acceptable")
+                return True
 
-        if key == Key.down:
-            self._adjust_master_slider(-0.01)
-            return True
+            case Key.left:
+                self._label_image("unacceptable")
+                return True
 
-        return False
+            case Key.up:
+                self._adjust_master_slider(step)
+                return True
 
-    def _on_release(self, key):
-        if key in (Key.shift, Key.shift_r):
-            self.shift_pressed = False
+            case Key.down:
+                self._adjust_master_slider(-step)
+                return True
 
-    def _adjust_master_slider(self, increment: float):
-        """Adjust the master slider up/down by increment amount."""
-        master = self.labeling_controls.master_slider
-        new_value = master.slider.value + increment
-        new_value = min(
-            max(new_value, master.min_val), master.max_val
-        )  # Clamp to range
-        master.set_value(new_value)
-        self.labeling_controls.distribute_master_severity(master_value=new_value)
+            case Key.tab:
+                self._load_next_image()
+                return True
+
+            case _:
+                return False

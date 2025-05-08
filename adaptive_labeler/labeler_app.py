@@ -87,7 +87,7 @@ class LabelAppFactory:
             silent_focus.focus()
 
             # Key handler integration
-            def on_keyboard(key: Key | KeyCode):
+            def on_keyboard_press(key: Key | KeyCode):
                 if not page.window.focused:
                     return
 
@@ -99,7 +99,7 @@ class LabelAppFactory:
                     if handled:
                         page.update()
 
-            page.on_keyboard_event = on_keyboard
+            # page.on_keyboard_event = on_keyboard_press
 
             pressed = False
             key_pressed: Key | KeyCode | None = None
@@ -120,7 +120,7 @@ class LabelAppFactory:
                 repeat_delay = config.key_press_debounce_delay
                 while True:
                     if pressed:
-                        on_keyboard(key_pressed)
+                        on_keyboard_press(key_pressed)
                     time.sleep(repeat_delay)
 
             keyboard.Listener(on_press=on_press, on_release=on_release).start()
