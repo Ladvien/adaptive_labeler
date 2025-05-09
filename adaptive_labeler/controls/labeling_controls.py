@@ -140,11 +140,9 @@ class LabelingController(ft.Row):
     # ----------------------------------------------------------------------
     # Extract current slider values
 
-    def get_noising_operations(self) -> dict[str, NosingOperation]:
-        noising_ops: dict[str, NosingOperation] = {}
+    def update_severity(self, maker: NoisyImageMaker) -> dict[str, NosingOperation]:
         for noise_control in self.threshold_sliders:
             if isinstance(noise_control, NoiseControl):
-                noising_ops[noise_control.label] = NosingOperation.from_str(
+                maker.update_severity(
                     noise_control.label, float(noise_control.slider.value)
                 )
-        return noising_ops

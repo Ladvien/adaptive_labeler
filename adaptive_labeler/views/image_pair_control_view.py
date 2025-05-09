@@ -86,34 +86,23 @@ class ImagePairControlView(ft.Column):
     def _on_slider_update(self, e: ft.ControlEvent, fn_name: str, value: float):
         self._resample_noisy_image()
 
-    def _current_noising_operations(self) -> dict[str, NosingOperation]:
-        return self.labeling_controls.get_noising_operations()
-
-    def _current_noisy_image_maker(self) -> NoisyImageMaker:
-        return NoisyImageMaker(
-            self.noisy_image_maker.image_path,
-            self.label_manager.config.output_dir,
-            self._current_noising_operations().values(),
-        )
-
     def _resample_noisy_image(self):
-        print("Resampling noisy image...")
-        updated_maker = self._current_noisy_image_maker()
-        print(updated_maker)
+        print(self.noisy_image_maker)
+        self.labeling_controls.update_severity(self.noisy_image_maker)
+        print(self.noisy_image_maker)
 
         self.image_panel.update_images(
-            original_image_name=updated_maker.image_path.name,
-            noisy_image_name=updated_maker.image_path.name,
-            original_image_base64=updated_maker.image_path.load_as_base64(),
-            noisy_image_base64=updated_maker.noisy_base64(),
+            original_image_name=self.noisy_image_maker.image_path.name,
+            noisy_image_name=self.noisy_image_maker.image_path.name,
+            original_image_base64=self.noisy_image_maker.image_path.load_as_base64(),
+            noisy_image_base64=self.noisy_image_maker.noisy_base64(),
         )
 
     # ----------------------------------------------------
     # LABELING
 
     def _label_image(self, label: str) -> None:
-        updated_maker = self._current_noisy_image_maker()
-        self.label_manager.label_writer.record(updated_maker, label)
+        self.label_manager.label_writer.record(self.noisy_image_maker, label)
         self._show_feedback(
             color=ft.colors.GREEN_400 if label == "acceptable" else ft.colors.RED_400
         )
