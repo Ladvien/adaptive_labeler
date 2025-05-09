@@ -25,7 +25,7 @@ class ImageViewerPanel(ft.Container):
         self.bgcolor = color_scheme.primary
         self.padding = 20
         self.border_radius = 12
-        self.expand = 7
+        self.expand = 12
 
     def update_images(
         self,
