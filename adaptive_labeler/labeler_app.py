@@ -133,7 +133,7 @@ if __name__ == "__main__":
 
     # WILO: Set the path to your images directory
     SOURCE_IMAGES_PATH = "/Users/ladvien/ladvien.com/content/images"
-    TRAIN_IMAGES_OUTPUT_PATH = "training_data/aiqa"
+    TRAIN_IMAGES_OUTPUT_PATH = "/Users/ladvien/responsive_images_workspace/responsive-image-utilities/responsive_image_utilities/training_data/aiqa"
     TEMPORARY_IMAGES_OUTPUT_PATH = f"{TRAIN_IMAGES_OUTPUT_PATH}/temporary"
 
     NUM_IMAGE_SAMPLES = 5000

@@ -34,7 +34,7 @@ class LabelingController(ft.Row):
         self.mode = mode
         self.noisy_image_maker = noisy_image_maker
         self.severity_update_callback = severity_update_callback
-        self.default_master_noise_value = 0.4
+        self.default_master_noise_value = 0.0
         self.threshold_sliders: list[NoiseControl] = []
 
         # --- Per-noise sliders ---
@@ -112,6 +112,7 @@ class LabelingController(ft.Row):
         if num_sliders == 0 or total <= 0:
             for slider in self.threshold_sliders:
                 slider.set_value(0.0)
+                slider.update()
             return
 
         # --- Random weights ---
@@ -123,6 +124,7 @@ class LabelingController(ft.Row):
         for slider, proportion in zip(self.threshold_sliders, proportions):
             slider_value = round(total * proportion, 3)
             slider.set_value(slider_value)
+            slider.update()
 
     def did_mount(self):
         # Now that the controls are attached, we can safely update them
